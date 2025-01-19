@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电子萨克斯</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding-top: 50px;
+        }
+        .key {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            margin: 10px;
+            background-color: #f0f0f0;
+            border: 1px solid #ccc;
+            line-height: 50px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1 id="currnote">当前音符</h1>
+
+    <script src="Tone.js"></script>
+    <script>
+
+	const currnote = document.getElementById('currnote');
+
+	// 创建一个合成器并打开
+	const synth = new Tone.Synth({
+	    oscillator: {
+	        type: 'sawtooth'
+	    },
+	    envelope: {
+	        attack: 0.01,
+	        decay: 0.1,
+	        sustain: 0.9,
+	        release: 1
+	    },
+	    portamento: 0
+	}).toDestination();
+
+	// 设置合成器为萨克斯风的声音
+	synth.set({
+	    oscillator: { type: "fmsine" },
+	    envelope: {
+	        attack: 0.01,
+	        decay: 0.2,
+	        sustain: 0.5,
+	        release: 1
+	    },
+	    filter: {
+	        Q: 5,
+	        type: "lowpass",
+	        rolloff: -24
+	    },
+	    portamento: 0
+	});
+
+	let pressed = {};
+
+	const nodeMap = {
+		"'dghjkl": ['D#3', "1" ],
+		"dghjkl": ['F3', "2" ],
+		"dghjk": ['G3', "3" ],
+		"dghj": ['G#3', "4" ],
+		"dgh": ["A#3","5" ],
+		"dg": ["C4","6" ],
+		"d": ["D4","7" ],
+		"g": ['D#4',"1'" ],
+		"'adghjkl": ["D#4","1'" ],
+		"adghjkl": ["F4","2'" ],
+		"adghjk": ['G4',"3'" ],
+		"adghj": ['G#4',"4'" ],
+		"adgh": ["A#4","5'" ],
+		"adg": ["C5","6'" ],
+		"ad": ["D5","7'" ],
+		"ag": ['D#5',"1''" ],
+	};
+
+	let lastNote = '';
+	let delayTimer = null;
+
+	function recheckKey() {
+		let keys = [];
+		for (k in pressed) {
+			if (!pressed.hasOwnProperty(k))
+				continue;
+
+			if (pressed[k])
+				keys.push(k);
+		}
+
+		let notestr = keys.sort().join('');
+		let note = nodeMap[notestr];
+		if (!note) {		// not press
+			if (delayTimer) {
+				clearTimeout(delayTimer);
+			}
+			
+			synth.triggerRelease();
+			lastNote = '';
+		} else {
+			if (note[0] != lastNote) { // change
+				deliverNote(note[0], note[1]);
+			}
+			lastNote = note[0];
+		}
+	}
+
+	function playNote(note, name) {
+		currnote.innerText = "当前音符: " + note + ", " + name;
+		synth.triggerRelease();
+		synth.triggerAttack(note);
+	}
+
+	function deliverNote(note, name) {
+		if (delayTimer) {
+			clearTimeout(delayTimer);
+		}
+
+		delayTimer = setTimeout(function() {
+			playNote(note, name);
+			delayTimer = null;
+		}, 5);
+	}
+
+	document.addEventListener('keydown', event => {
+		pressed[event.key] = true;
+		recheckKey();
+	});
+	document.addEventListener('keyup', event => {
+		pressed[event.key] = false;
+		recheckKey();
+	});
+	</script>
+</body>
+</html>
